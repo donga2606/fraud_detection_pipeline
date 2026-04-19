@@ -6,37 +6,41 @@ from typing import Any, Iterator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
-from .data_processing import DEFAULT_RANDOM_SEED
-
 MODEL_CHOICES = ("logistic_regression", "random_forest")
+TRAINING_RANDOM_SEED = 42
+
+DEFAULT_LOGISTIC_REGRESSION_PARAMS = {
+    "C": 1.0,
+    "class_weight": "balanced",
+    "max_iter": 2000,
+    "solver": "liblinear",
+}
+
+DEFAULT_RANDOM_FOREST_PARAMS = {
+    "class_weight": "balanced_subsample",
+    "max_depth": None,
+    "min_samples_leaf": 1,
+    "min_samples_split": 2,
+    "n_estimators": 300,
+    "n_jobs": -1,
+}
 
 
 def build_model(
     model_name: str,
-    random_seed: int = DEFAULT_RANDOM_SEED,
+    random_seed: int = TRAINING_RANDOM_SEED,
     **overrides: Any,
 ):
     if model_name == "logistic_regression":
-        params = {
-            "C": 1.0,
-            "class_weight": "balanced",
-            "max_iter": 2000,
-            "random_state": random_seed,
-            "solver": "liblinear",
-        }
+        params = DEFAULT_LOGISTIC_REGRESSION_PARAMS.copy()
         params.update(overrides)
+        params["random_state"] = TRAINING_RANDOM_SEED
         return LogisticRegression(**params)
 
     if model_name == "random_forest":
-        params = {
-            "class_weight": "balanced_subsample",
-            "max_depth": None,
-            "min_samples_leaf": 1,
-            "n_estimators": 300,
-            "n_jobs": -1,
-            "random_state": random_seed,
-        }
+        params = DEFAULT_RANDOM_FOREST_PARAMS.copy()
         params.update(overrides)
+        params["random_state"] = TRAINING_RANDOM_SEED
         return RandomForestClassifier(**params)
 
     raise ValueError(f"Unsupported model: {model_name}")

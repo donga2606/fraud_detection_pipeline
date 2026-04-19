@@ -4,7 +4,12 @@ import argparse
 from pathlib import Path
 
 from .data_processing import DEFAULT_DATA_URL, DEFAULT_RANDOM_SEED
-from .model import MODEL_CHOICES
+from .model import (
+    DEFAULT_LOGISTIC_REGRESSION_PARAMS,
+    DEFAULT_RANDOM_FOREST_PARAMS,
+    MODEL_CHOICES,
+    TRAINING_RANDOM_SEED,
+)
 from .pipeline import (
     evaluate_model_pipeline,
     prepare_pipeline,
@@ -67,6 +72,42 @@ def add_train_command(subparsers) -> None:
         type=str,
         default="artifacts/models",
         help="Directory where fitted model artifacts are stored.",
+    )
+    parser.add_argument(
+        "--lr-c",
+        type=float,
+        default=DEFAULT_LOGISTIC_REGRESSION_PARAMS["C"],
+        help="Inverse regularization strength for logistic regression.",
+    )
+    parser.add_argument(
+        "--lr-max-iter",
+        type=int,
+        default=DEFAULT_LOGISTIC_REGRESSION_PARAMS["max_iter"],
+        help="Maximum number of iterations for logistic regression.",
+    )
+    parser.add_argument(
+        "--lr-solver",
+        type=str,
+        default=DEFAULT_LOGISTIC_REGRESSION_PARAMS["solver"],
+        help="Solver used by logistic regression.",
+    )
+    parser.add_argument(
+        "--rf-n-estimators",
+        type=int,
+        default=DEFAULT_RANDOM_FOREST_PARAMS["n_estimators"],
+        help="Number of trees in the random forest.",
+    )
+    parser.add_argument(
+        "--rf-max-depth",
+        type=int,
+        default=DEFAULT_RANDOM_FOREST_PARAMS["max_depth"],
+        help="Maximum tree depth for the random forest.",
+    )
+    parser.add_argument(
+        "--rf-min-samples-split",
+        type=int,
+        default=DEFAULT_RANDOM_FOREST_PARAMS["min_samples_split"],
+        help="Minimum samples required to split an internal node.",
     )
 
 
@@ -174,6 +215,24 @@ def resolve_models(model_argument: str) -> list[str]:
     return [model_argument]
 
 
+def get_train_model_params(args, model_name: str) -> dict[str, object]:
+    if model_name == "logistic_regression":
+        return {
+            "C": args.lr_c,
+            "max_iter": args.lr_max_iter,
+            "solver": args.lr_solver,
+        }
+
+    if model_name == "random_forest":
+        return {
+            "n_estimators": args.rf_n_estimators,
+            "max_depth": args.rf_max_depth,
+            "min_samples_split": args.rf_min_samples_split,
+        }
+
+    raise ValueError(f"Unsupported model: {model_name}")
+
+
 def handle_prepare(args) -> int:
     metadata = prepare_pipeline(
         input_csv=args.input_csv,
@@ -200,7 +259,8 @@ def handle_train(args) -> int:
             prepared_dir=args.prepared_dir,
             model_name=model_name,
             output_dir=args.output_dir,
-            random_seed=DEFAULT_RANDOM_SEED,
+            model_params=get_train_model_params(args, model_name),
+            random_seed=TRAINING_RANDOM_SEED,
         )
         print(f"Trained {model_name}: {result['model_path']}")
     return 0

@@ -61,25 +61,29 @@ def train_model_pipeline(
     prepared_dir: str | Path,
     model_name: str,
     output_dir: str | Path,
+    model_params: dict[str, object] | None = None,
     random_seed: int = DEFAULT_RANDOM_SEED,
 ) -> dict[str, str]:
     features, target, metadata = load_training_data(prepared_dir)
-    model = build_model(model_name, random_seed=random_seed)
+    requested_params = dict(model_params or {})
+    model = build_model(model_name, random_seed=random_seed, **requested_params)
     model.fit(features, target)
 
     output_path = ensure_directory(Path(output_dir))
     model_path = output_path / f"{model_name}.joblib"
     summary_path = output_path / f"{model_name}_training_summary.json"
 
-    joblib.dump(model, model_path)
     summary_payload = {
         "model_name": model_name,
         "prepared_dir": str(Path(prepared_dir).resolve()),
         "random_seed": random_seed,
         "training_rows": int(len(features)),
         "feature_count": len(metadata.feature_columns),
-        "parameters": model.get_params(),
+        "requested_parameters": requested_params,
+        "resolved_parameters": model.get_params(),
     }
+    setattr(model, "training_metadata", summary_payload)
+    joblib.dump(model, model_path)
     summary_path.write_text(json.dumps(summary_payload, indent=2), encoding="utf-8")
 
     return {

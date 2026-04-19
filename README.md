@@ -40,7 +40,9 @@ The implementation follows the HCMUT Internship 1 engineering constraints:
    - Trains one or both baseline models:
      - `logistic_regression`
      - `random_forest`
+   - Accepts optional model-specific hyperparameters through CLI flags
    - Saves fitted models to `artifacts/models/`
+   - Persists requested and resolved training parameters for reproducibility
 
 3. `evaluate`
    - Scores trained models on the untouched temporal holdout
@@ -108,11 +110,30 @@ Train both models:
 python -m src.cli train --model all
 ```
 
+The train command keeps the baseline defaults when no extra flags are provided, so `python -m src.cli train` reproduces the original configuration.
+
 Train only logistic regression:
 
 ```bash
 python -m src.cli train --model logistic_regression
 ```
+
+Train logistic regression with custom hyperparameters:
+
+```bash
+python -m src.cli train --model logistic_regression --lr-c 0.5 --lr-max-iter 3000 --lr-solver liblinear
+```
+
+Train random forest with custom hyperparameters:
+
+```bash
+python -m src.cli train --model random_forest --rf-n-estimators 500 --rf-max-depth 12 --rf-min-samples-split 4
+```
+
+Available training flags:
+
+- Logistic regression: `--lr-c`, `--lr-max-iter`, `--lr-solver`
+- Random forest: `--rf-n-estimators`, `--rf-max-depth`, `--rf-min-samples-split`
 
 ### 3. Evaluate trained models
 
@@ -197,3 +218,4 @@ After a full run, the generated directories typically look like this:
 - The temporal holdout prevents leakage from future transactions into training
 - Scaling is fit on the training period only
 - Evaluation is run on the untouched test partition
+- Training summaries record both the requested CLI hyperparameters and the resolved fitted model parameters
