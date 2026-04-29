@@ -83,6 +83,50 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Docker Setup
+
+If you want the instructor to run the project in a consistent environment, you can use Docker instead of a local Python installation.
+
+Build the image once from the project root:
+
+```bash
+docker build -t fraud-detection .
+```
+
+Run the CLI commands through the container while mounting `data/` and `artifacts/` so generated files stay on the host machine:
+
+```bash
+docker run --rm \
+  -v "$(pwd)/data:/app/data" \
+  -v "$(pwd)/artifacts:/app/artifacts" \
+  fraud-detection prepare
+```
+
+```bash
+docker run --rm \
+  -v "$(pwd)/data:/app/data" \
+  -v "$(pwd)/artifacts:/app/artifacts" \
+  fraud-detection train --model all
+```
+
+```bash
+docker run --rm \
+  -v "$(pwd)/data:/app/data" \
+  -v "$(pwd)/artifacts:/app/artifacts" \
+  fraud-detection evaluate --model all
+```
+
+Launch the Streamlit dashboard from the same image:
+
+```bash
+docker run --rm \
+  -p 8501:8501 \
+  -v "$(pwd)/artifacts:/app/artifacts" \
+  fraud-detection dashboard
+```
+
+Then open `http://localhost:8501` in a browser.
+
 ## Dataset
 
 By default, `prepare` downloads the public TensorFlow-hosted mirror of the European credit card fraud dataset:

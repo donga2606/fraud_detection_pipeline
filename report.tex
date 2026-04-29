@@ -38,13 +38,12 @@
 
 \noindent
 \begin{tabular}{>{\bfseries}p{4.2cm}p{9.5cm}}
-Student name & [Your full name] \\
-Student ID & [Your student ID] \\
-Class & [Your class] \\
-Major & Computer Science / Computer Engineering \\
+Full name & Dang The Dong A \\
+Student ID & 2570791 \\
+Major & Computer Science \\
 Course & Internship 1 \\
-Instructor & [Professor name] \\
-Submission date & [Day Month Year] \\
+Instructor & Prof.\ Quan Thanh Tho \\
+Submission date & 30 April 2026 \\
 \end{tabular}
 
 \vfill
@@ -306,7 +305,7 @@ The random forest model produced a more balanced outcome. It achieved precision 
 
 \chapter{Discussion}
 \section{Main Contributions of the Project}
-The project demonstrates several characteristics that make it appropriate for an Internship 1 report. First, the workflow is modular rather than notebook-dependent. Second, it uses a temporal split, which is more realistic for fraud detection than a random split. Third, reproducibility is addressed through saved metadata, model summaries, run manifests, and historical run indexing. Finally, the project combines command-line execution with a simple dashboard for result inspection.
+The main contribution of this project is the development of a pipeline-based system that makes the fraud detection workflow easier to execute and manage. Instead of training and evaluating models through scattered scripts or notebooks, the project organizes the process into a clear sequence of stages, including data preparation, model training, evaluation, hyperparameter sweep, and result comparison. This design improves usability, reproducibility, and experiment management, allowing users to run and review machine learning experiments more efficiently.
 
 \section{Limitations}
 Despite its strengths, the project has several limitations. Only two baseline model families were studied. The current workflow does not include advanced feature engineering, systematic threshold optimization, or model explainability. In addition, the solution remains an offline batch workflow and is not designed as a production fraud monitoring service.

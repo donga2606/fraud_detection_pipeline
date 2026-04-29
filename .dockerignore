@@ -1,0 +1,12 @@
+.git
+.venv
+venv
+__pycache__/
+*.pyc
+.DS_Store
+data/
+artifacts/
+smoke_data/
+smoke_artifacts/
+internship_1.pdf
+report.tex
