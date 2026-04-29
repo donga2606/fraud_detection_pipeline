@@ -11,8 +11,10 @@ from .model import (
     TRAINING_RANDOM_SEED,
 )
 from .pipeline import (
+    compare_runs_pipeline,
     evaluate_model_pipeline,
     prepare_pipeline,
+    resolve_saved_model_path,
     sweep_model_pipeline,
     train_model_pipeline,
 )
@@ -71,7 +73,7 @@ def add_train_command(subparsers) -> None:
         "--output-dir",
         type=str,
         default="artifacts/models",
-        help="Directory where fitted model artifacts are stored.",
+        help="Root directory where per-run fitted model artifacts are stored.",
     )
     parser.add_argument(
         "--lr-c",
@@ -138,13 +140,13 @@ def add_evaluate_command(subparsers) -> None:
         "--models-dir",
         type=str,
         default="artifacts/models",
-        help="Directory that stores trained model artifacts.",
+        help="Root directory that stores per-run trained model artifacts.",
     )
     parser.add_argument(
         "--output-dir",
         type=str,
         default="artifacts/reports",
-        help="Directory for evaluation reports and precision-recall curves.",
+        help="Root directory for per-run evaluation reports and precision-recall curves.",
     )
     parser.add_argument(
         "--threshold",
@@ -175,7 +177,7 @@ def add_sweep_command(subparsers) -> None:
         "--output-dir",
         type=str,
         default="artifacts/sweeps",
-        help="Directory where sweep outputs are written.",
+        help="Root directory where per-run sweep outputs are written.",
     )
     parser.add_argument(
         "--validation-size",
@@ -197,6 +199,43 @@ def add_sweep_command(subparsers) -> None:
     )
 
 
+def add_compare_command(subparsers) -> None:
+    parser = subparsers.add_parser(
+        "compare",
+        help="Build a comparison report across saved evaluated runs.",
+    )
+    parser.add_argument(
+        "--artifacts-root",
+        type=str,
+        default="artifacts",
+        help="Artifacts root that contains runs/ manifests and run_history.csv.",
+    )
+    parser.add_argument(
+        "--model",
+        choices=[*MODEL_CHOICES, "all"],
+        default="all",
+        help="Filter the comparison to a specific model family.",
+    )
+    parser.add_argument(
+        "--sort-by",
+        type=str,
+        default="average_precision",
+        help="Metric column used to rank runs in the comparison output.",
+    )
+    parser.add_argument(
+        "--top-n",
+        type=int,
+        default=None,
+        help="Optional limit on the number of comparison rows returned.",
+    )
+    parser.add_argument(
+        "--output-path",
+        type=str,
+        default=None,
+        help="Optional CSV or JSON output path for the comparison report.",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="CLI pipeline for the European credit card fraud detection dataset."
@@ -206,6 +245,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_train_command(subparsers)
     add_evaluate_command(subparsers)
     add_sweep_command(subparsers)
+    add_compare_command(subparsers)
     return parser
 
 
@@ -262,7 +302,7 @@ def handle_train(args) -> int:
             model_params=get_train_model_params(args, model_name),
             random_seed=TRAINING_RANDOM_SEED,
         )
-        print(f"Trained {model_name}: {result['model_path']}")
+        print(f"Trained {model_name}: run_id={result['run_id']}, model={result['model_path']}")
     return 0
 
 
@@ -273,7 +313,7 @@ def iter_evaluation_targets(args) -> list[tuple[str, str]]:
 
     targets = []
     for model_name in resolve_models(args.model):
-        targets.append((model_name, str(Path(args.models_dir) / f"{model_name}.joblib")))
+        targets.append((model_name, str(resolve_saved_model_path(args.models_dir, model_name))))
     return targets
 
 
@@ -292,6 +332,7 @@ def handle_evaluate(args) -> int:
             f"f1={result['f1_score']:.4f}, "
             f"average_precision={result['average_precision']:.4f}"
         )
+        print(f"Run ID: {result['run_id']}")
         print(f"Report: {result['report_json']}")
     return 0
 
@@ -306,8 +347,25 @@ def handle_sweep(args) -> int:
         random_seed=DEFAULT_RANDOM_SEED,
         threshold=args.threshold,
     )
+    print(f"Run ID: {result['run_id']}")
     print(f"Sweep results: {result['results_csv']}")
     print(f"Sweep summary: {result['summary_json']}")
+    return 0
+
+
+def handle_compare(args) -> int:
+    result = compare_runs_pipeline(
+        artifact_root=args.artifacts_root,
+        model_name=args.model,
+        sort_by=args.sort_by,
+        top_n=args.top_n,
+        output_path=args.output_path,
+    )
+    print(f"Comparison rows: {result['row_count']}")
+    print(f"Run history: {result['history_path']}")
+    if result["comparison_path"]:
+        print(f"Comparison report: {result['comparison_path']}")
+    print(result["preview"])
     return 0
 
 
@@ -323,6 +381,8 @@ def main() -> int:
         return handle_evaluate(args)
     if args.command == "sweep":
         return handle_sweep(args)
+    if args.command == "compare":
+        return handle_compare(args)
 
     parser.error(f"Unsupported command: {args.command}")
     return 1
