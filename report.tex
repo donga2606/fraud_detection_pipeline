@@ -1,0 +1,375 @@
+\documentclass[12pt,a4paper]{report}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{setspace}
+\usepackage{indentfirst}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    citecolor=black,
+    pdftitle={Internship 1 Report - Credit Card Fraud Detection Pipeline}
+}
+
+\setstretch{1.3}
+\setlength{\parskip}{0.2em}
+\setlength{\parindent}{1.5em}
+
+\begin{document}
+
+\begin{titlepage}
+\begin{center}
+{\large \textbf{VIETNAM NATIONAL UNIVERSITY HO CHI MINH CITY}}\\[0.2cm]
+{\large \textbf{HO CHI MINH CITY UNIVERSITY OF TECHNOLOGY}}\\[0.2cm]
+{\large \textbf{FACULTY OF COMPUTER SCIENCE AND ENGINEERING}}\\[2.0cm]
+
+{\Large \textbf{INTERNSHIP 1 REPORT}}\\[0.8cm]
+{\Large \textbf{DEVELOPMENT OF A REPRODUCIBLE CREDIT CARD FRAUD DETECTION PIPELINE}}\\[2.0cm]
+\end{center}
+
+\noindent
+\begin{tabular}{>{\bfseries}p{4.2cm}p{9.5cm}}
+Student name & [Your full name] \\
+Student ID & [Your student ID] \\
+Class & [Your class] \\
+Major & Computer Science / Computer Engineering \\
+Course & Internship 1 \\
+Instructor & [Professor name] \\
+Submission date & [Day Month Year] \\
+\end{tabular}
+
+\vfill
+
+\begin{center}
+Ho Chi Minh City, 2026
+\end{center}
+\end{titlepage}
+
+\pagenumbering{roman}
+
+\chapter*{Acknowledgement}
+\addcontentsline{toc}{chapter}{Acknowledgement}
+I would like to express my sincere appreciation to the lecturers and supervisor of Ho Chi Minh City University of Technology for their guidance during the completion of this Internship 1 project. Their comments and academic direction were valuable in refining both the technical scope and the presentation of the work.
+
+I also acknowledge the open-source community for the software libraries used in this project, particularly Python, scikit-learn, imbalanced-learn, Matplotlib, and Streamlit. These tools provided a reliable foundation for implementing and evaluating the proposed workflow.
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+This report presents the design and implementation of a reproducible machine learning pipeline for credit card fraud detection using the public European cardholder transaction dataset. The objective of the project was not limited to training a classifier; rather, it was to develop a compact engineering workflow that supports data preparation, model training, evaluation, experiment tracking, and result inspection in a systematic manner.
+
+The implemented system includes temporal train-test splitting, feature scaling, class imbalance handling with SMOTE, baseline model training, hyperparameter sweep, run comparison, and a lightweight dashboard for reviewing stored experiment artifacts. Logistic regression and random forest were selected as baseline models because they provide a useful contrast between a linear model and an ensemble model for tabular classification.
+
+Evaluation was carried out using metrics that are appropriate for imbalanced data, namely precision, recall, F1-score, and average precision. Among the saved experimental runs, the random forest model achieved the best overall balance, with precision of 0.8906, recall of 0.7600, F1-score of 0.8201, and average precision of 0.8074. Logistic regression achieved higher recall at 0.8800 but produced substantially lower precision at 0.0676, leading to a significantly weaker F1-score. These results indicate that the proposed pipeline is suitable as an Internship 1 case study because it demonstrates both technical implementation and critical evaluation.
+
+\tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Introduction}
+\section{Background}
+Credit card fraud detection is a representative problem in applied machine learning, especially in domains where the target class is rare and the cost of misclassification is high. In this setting, a useful solution requires more than a single trained model. It must also incorporate correct preprocessing, leakage prevention, reproducibility, and clear evaluation procedures.
+
+The present project was developed as a compact fraud detection workflow based on the public \texttt{creditcard.csv} dataset. The emphasis of the project is placed on sound engineering practice: modular implementation, deterministic execution, explicit artifact management, and evaluation methods that are appropriate for highly imbalanced data.
+
+\section{Objectives}
+The objectives of the project are as follows:
+\begin{enumerate}
+    \item to develop a modular pipeline for credit card fraud detection;
+    \item to apply a temporal train-test split in order to reduce information leakage;
+    \item to perform preprocessing and imbalance handling in a reproducible manner;
+    \item to compare baseline models using suitable metrics for imbalanced classification;
+    \item to preserve experiment outputs for subsequent inspection and comparison.
+\end{enumerate}
+
+\section{Scope}
+The scope of the work includes data preparation, model training, evaluation, hyperparameter sweep, run comparison, and dashboard-based inspection of saved results. The project does not include online inference, large-scale deployment, enterprise integration, or real-time fraud response. Its primary purpose is to demonstrate a complete and well-structured machine learning workflow at the scale appropriate to Internship 1.
+
+\section{Report Organization}
+The remainder of this report is organized as follows. Chapter 2 presents the assigned tasks and work plan. Chapter 3 reviews the theoretical background relevant to the project. Chapter 4 discusses the requirements and overall system design. Chapter 5 describes the implementation in detail. Chapter 6 presents the experimental setup and evaluation results. Chapter 7 discusses the significance and limitations of the work. Chapter 8 concludes the report and outlines possible future extensions.
+
+\chapter{Assigned Tasks and Work Plan}
+\section{Assigned Tasks}
+The project was carried out through the following main tasks:
+\begin{enumerate}
+    \item studying the characteristics of the fraud detection problem and the public dataset used in the project;
+    \item implementing a preprocessing stage that validates the data, sorts transactions by time, and creates a temporal split;
+    \item applying feature scaling and oversampling to the training data in a controlled manner;
+    \item training and evaluating baseline classification models;
+    \item generating experiment artifacts such as reports, curve data, and image outputs;
+    \item tracking multiple experimental runs for later comparison;
+    \item developing a simple dashboard for reviewing saved runs.
+\end{enumerate}
+
+\section{Work Plan}
+The work was organized into the following stages:
+\begin{enumerate}
+    \item problem study and dataset familiarization;
+    \item preprocessing pipeline design and implementation;
+    \item model training and evaluation implementation;
+    \item experiment tracking and comparison support;
+    \item dashboard development;
+    \item documentation and report preparation.
+\end{enumerate}
+
+\section{Expected Deliverables}
+The final output of the project consists of:
+\begin{itemize}
+    \item a modular Python implementation under \texttt{src/};
+    \item processed dataset artifacts under \texttt{data/};
+    \item model, report, sweep, and run-history artifacts under \texttt{artifacts/};
+    \item a Streamlit dashboard under \texttt{ui/app.py};
+    \item project documentation in \texttt{README.md}.
+\end{itemize}
+
+\chapter{Theoretical Background}
+\section{Credit Card Fraud Detection}
+Credit card fraud detection aims to distinguish fraudulent transactions from legitimate ones in a highly skewed dataset. In practice, the number of fraudulent transactions is very small compared with the number of legitimate transactions. This imbalance makes the problem challenging because a model may achieve a high overall accuracy while still failing to detect many fraud cases.
+
+\section{Imbalanced Classification}
+In imbalanced classification, the minority class is underrepresented relative to the majority class. Standard learning algorithms often become biased toward the majority class, especially when the class distribution is extreme. In the context of fraud detection, such bias is undesirable because missed fraud cases may be costly.
+
+To mitigate this issue, the project applies SMOTE to the training partition. SMOTE creates synthetic samples for the minority class in feature space, thereby improving the representation of fraudulent transactions during model fitting.
+
+\section{Evaluation Metrics}
+Accuracy alone is not sufficient for this problem. For that reason, the project uses the following evaluation measures:
+\begin{itemize}
+    \item \textbf{Precision}: the proportion of predicted fraud cases that are truly fraudulent;
+    \item \textbf{Recall}: the proportion of actual fraud cases that are correctly detected;
+    \item \textbf{F1-score}: the harmonic mean of precision and recall;
+    \item \textbf{Average precision}: a summary of model quality across decision thresholds based on the precision-recall curve.
+\end{itemize}
+
+These metrics provide a more meaningful assessment in imbalanced settings, where false negatives and false positives do not have the same practical impact.
+
+\section{Temporal Holdout Strategy}
+The project uses the \texttt{Time} column to construct a temporal split. Earlier observations are used for training, while later observations are reserved for testing. This choice is more realistic than a random split because it approximates the way a deployed model would be evaluated on future transactions.
+
+\section{Baseline Models}
+Two baseline models are considered in this project:
+\begin{enumerate}
+    \item \textbf{Logistic Regression}, which serves as a simple and interpretable linear baseline for tabular data;
+    \item \textbf{Random Forest}, which is an ensemble method capable of capturing nonlinear relationships and feature interactions.
+\end{enumerate}
+
+\chapter{Requirement Analysis and System Design}
+\section{Functional Requirements}
+The system is required to perform the following functions:
+\begin{itemize}
+    \item load a local dataset or download the default dataset automatically;
+    \item validate the expected columns and sort transactions by time;
+    \item split the dataset into training and test partitions according to temporal order;
+    \item scale input features using statistics learned only from the training partition;
+    \item resample the training data using SMOTE;
+    \item train one or more classification models;
+    \item evaluate saved models on an untouched temporal holdout set;
+    \item conduct hyperparameter sweeps on an inner validation split;
+    \item compare stored runs and display their results through a dashboard.
+\end{itemize}
+
+\section{Non-Functional Requirements}
+The most important non-functional requirements are reproducibility, modularity, maintainability, and usability. These are addressed through a separated \texttt{src/} structure, a fixed random seed, explicit artifact persistence, run manifests, and a command-line interface that supports repeated execution.
+
+\section{Overall Workflow}
+The system is organized into six user-facing stages:
+\begin{enumerate}
+    \item \texttt{prepare};
+    \item \texttt{train};
+    \item \texttt{evaluate};
+    \item \texttt{sweep};
+    \item \texttt{compare};
+    \item \texttt{dashboard}.
+\end{enumerate}
+
+The first four stages create experimental outputs, while the last two stages support inspection and comparison of previously saved runs.
+
+\section{Module Organization}
+The implementation is divided into specialized modules:
+\begin{itemize}
+    \item \texttt{src/data\_processing.py} manages dataset loading, validation, temporal splitting, scaling, resampling, and metadata persistence;
+    \item \texttt{src/model.py} defines the supported model families and sweep search spaces;
+    \item \texttt{src/pipeline.py} coordinates the main workflows for training, evaluation, sweeping, and comparison;
+    \item \texttt{src/evaluation.py} computes performance metrics and saves precision-recall artifacts;
+    \item \texttt{src/cli.py} exposes the workflow through command-line commands;
+    \item \texttt{ui/app.py} implements a dashboard for reviewing stored runs.
+\end{itemize}
+
+\section{Artifact Design}
+Outputs are organized into separate directories for processed data, trained models, reports, sweeps, and run manifests. This structure prevents accidental overwriting of previous experiments and supports systematic comparison across runs.
+
+\chapter{Implementation}
+\section{Development Environment}
+The project is implemented in Python and relies on standard libraries for data processing and machine learning, including Pandas, scikit-learn, imbalanced-learn, Matplotlib, Joblib, and Streamlit. Dependency installation is specified in \texttt{requirements.txt}.
+
+\section{Dataset Preparation}
+The input dataset contains anonymized numerical features together with the \texttt{Time}, \texttt{Amount}, and \texttt{Class} columns. During preparation, the system validates the required schema, sorts transactions by \texttt{Time}, creates the temporal split, applies feature scaling, and stores the processed data and metadata on disk.
+
+The prepared dataset used in this report contains 227{,}845 training rows and 56{,}962 test rows. After resampling, the training partition contains 284{,}285 rows. The target variable is \texttt{Class}, and the feature set contains 30 columns, including \texttt{Time}, \texttt{Amount}, and the anonymized variables \texttt{V1} to \texttt{V28}.
+
+\section{Training Workflow}
+The training stage loads the prepared training data, constructs the requested model with the specified hyperparameters, fits the model, and stores the resulting artifact under a unique run directory. A training summary file is also generated to record the resolved parameters, training size, feature count, and random seed. This mechanism is important for repeatability and later analysis.
+
+\section{Evaluation Workflow}
+The evaluation stage loads a stored model, generates fraud scores for the temporal holdout set, applies a decision threshold, and computes precision, recall, F1-score, and average precision. In addition, it saves a JSON evaluation report, a precision-recall curve in CSV form, a PNG figure, an updated run manifest, and an updated run-history index.
+
+\section{Hyperparameter Sweep and Comparison Support}
+The sweep stage creates an inner temporal validation split from the training timeline and evaluates candidate hyperparameter combinations according to average precision, F1-score, and recall. The comparison stage then aggregates all completed runs into a sortable summary table. This design makes it possible to inspect the evolution of experiments without reopening each run manually.
+
+\section{Dashboard Interface}
+The project includes a lightweight Streamlit dashboard that reads the saved run history and manifests. The dashboard displays overall run statistics, detailed information for individual runs, and side-by-side comparisons. Although it is not essential for the core pipeline, it improves the usability of the project and supports demonstration in an academic setting.
+
+\chapter{Experimental Setup and Results}
+\section{Dataset Summary}
+Table~\ref{tab:dataset-summary} summarizes the main dataset settings used in the prepared data.
+
+\begin{table}[H]
+\centering
+\caption{Prepared dataset summary}
+\label{tab:dataset-summary}
+\begin{tabular}{lr}
+\toprule
+Item & Value \\
+\midrule
+Training rows & 227,845 \\
+Test rows & 56,962 \\
+Resampled training rows & 284,285 \\
+Feature count & 30 \\
+Target column & \texttt{Class} \\
+Temporal split start of test set & 145248.0 \\
+Sampling strategy & 0.25 \\
+Random seed & 42 \\
+Fraud cases in evaluated test set & 75 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Model Configurations}
+The experiments discussed in this report include the following representative evaluated runs:
+\begin{itemize}
+    \item \textbf{Logistic regression}: \texttt{C = 0.5}, \texttt{max\_iter = 3000}, \texttt{solver = liblinear}, and \texttt{class\_weight = balanced};
+    \item \textbf{Random forest}: \texttt{n\_estimators = 500}, \texttt{max\_depth = 12}, \texttt{min\_samples\_split = 4}, and \texttt{class\_weight = balanced\_subsample}.
+\end{itemize}
+
+Both models were evaluated at the threshold value of 0.5 on the same temporal holdout partition.
+
+\section{Quantitative Results}
+Table~\ref{tab:model-results} presents the principal evaluation metrics extracted from the saved comparison report.
+
+\begin{table}[H]
+\centering
+\caption{Model performance on the temporal holdout set}
+\label{tab:model-results}
+\begin{tabular}{lrrrr}
+\toprule
+Model & Precision & Recall & F1-score & Average Precision \\
+\midrule
+Logistic Regression & 0.0676 & 0.8800 & 0.1255 & 0.7706 \\
+Random Forest & 0.8906 & 0.7600 & 0.8201 & 0.8074 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Precision-Recall Curves}
+Figures~\ref{fig:lr-pr} and~\ref{fig:rf-pr} illustrate the saved precision-recall curves for the representative logistic regression and random forest runs.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\textwidth]{artifacts/reports/20260429T071627Z-bdf01b47/logistic_regression_precision_recall_curve.png}
+\caption{Precision-recall curve for the logistic regression run \texttt{20260429T071627Z-bdf01b47}}
+\label{fig:lr-pr}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\textwidth]{artifacts/reports/20260429T071850Z-bd9b899b/random_forest_precision_recall_curve.png}
+\caption{Precision-recall curve for the random forest run \texttt{20260429T071850Z-bd9b899b}}
+\label{fig:rf-pr}
+\end{figure}
+
+\section{Analysis of Results}
+The logistic regression model achieved a recall of 0.8800, indicating that most fraud cases in the test set were detected. However, its precision was only 0.0676 because the model predicted 977 positive cases while the test set contained only 75 actual fraud cases. This large number of false positives substantially reduced the practical usefulness of the model at the chosen threshold.
+
+The random forest model produced a more balanced outcome. It achieved precision of 0.8906 and recall of 0.7600, resulting in an F1-score of 0.8201 and an average precision of 0.8074. Among the evaluated runs recorded in the comparison report, this configuration provided the most favorable tradeoff between detecting fraud and limiting false alarms.
+
+\chapter{Discussion}
+\section{Main Contributions of the Project}
+The project demonstrates several characteristics that make it appropriate for an Internship 1 report. First, the workflow is modular rather than notebook-dependent. Second, it uses a temporal split, which is more realistic for fraud detection than a random split. Third, reproducibility is addressed through saved metadata, model summaries, run manifests, and historical run indexing. Finally, the project combines command-line execution with a simple dashboard for result inspection.
+
+\section{Limitations}
+Despite its strengths, the project has several limitations. Only two baseline model families were studied. The current workflow does not include advanced feature engineering, systematic threshold optimization, or model explainability. In addition, the solution remains an offline batch workflow and is not designed as a production fraud monitoring service.
+
+\section{Learning Outcomes}
+Through the completion of this project, several technical skills were strengthened, including preprocessing for tabular data, evaluation of imbalanced classifiers, experiment management, artifact organization, and the presentation of machine learning results in a structured academic format.
+
+\section{Personal Contribution Summary}
+The primary contributions made in this project include the design of the preprocessing workflow, the implementation of training and evaluation stages, the introduction of run tracking and comparison artifacts, and the development of a dashboard for reviewing saved experiments. These contributions extend beyond simple model usage and reflect basic machine learning system design and engineering practice.
+
+\chapter{Conclusion and Future Work}
+\section{Conclusion}
+This report has presented the development of a reproducible credit card fraud detection pipeline for Internship 1. The implemented workflow covers data preparation, temporal splitting, feature scaling, oversampling, model training, evaluation, hyperparameter sweep, run comparison, and dashboard-based inspection. Experimental results indicate that the random forest configuration provides the best balance among the evaluated runs, whereas logistic regression offers higher recall at the cost of a large number of false positives.
+
+Taken as a whole, the project demonstrates an appropriate level of technical depth for Internship 1 by combining problem formulation, implementation, reproducibility, experiment management, and performance analysis within a single coherent workflow.
+
+\section{Future Work}
+Several directions may be considered for future improvement:
+\begin{itemize}
+    \item evaluating stronger model families such as gradient boosting methods;
+    \item performing systematic threshold tuning based on application-specific cost tradeoffs;
+    \item incorporating explainability techniques to interpret model decisions;
+    \item extending the system into a service-oriented architecture or API;
+    \item adding broader automated tests for pipeline reliability.
+\end{itemize}
+
+\appendix
+\chapter{Example Commands}
+The following commands illustrate a typical execution flow:
+
+\begin{verbatim}
+python -m src.cli prepare
+python -m src.cli train --model logistic_regression --lr-c 0.5 --lr-max-iter 3000
+python -m src.cli evaluate --model logistic_regression
+python -m src.cli train --model random_forest --rf-n-estimators 500 --rf-max-depth 12 --rf-min-samples-split 4
+python -m src.cli evaluate --model random_forest
+python -m src.cli compare --output-path artifacts/comparison_report.json
+streamlit run ui/app.py
+\end{verbatim}
+
+\chapter{References}
+\begin{thebibliography}{9}
+
+\bibitem{tensorflow-data}
+TensorFlow.
+\newblock Credit card fraud detection dataset mirror.
+\newblock \url{https://storage.googleapis.com/download.tensorflow.org/data/creditcard.csv}
+
+\bibitem{sklearn}
+scikit-learn developers.
+\newblock scikit-learn documentation.
+\newblock \url{https://scikit-learn.org/stable/}
+
+\bibitem{imblearn}
+imbalanced-learn developers.
+\newblock imbalanced-learn documentation.
+\newblock \url{https://imbalanced-learn.org/stable/}
+
+\bibitem{streamlit}
+Streamlit.
+\newblock Streamlit documentation.
+\newblock \url{https://docs.streamlit.io/}
+
+\end{thebibliography}
+
+\end{document}

@@ -19,6 +19,24 @@ from .pipeline import (
     train_model_pipeline,
 )
 
+TRAIN_PARAMETER_SUMMARIES = {
+    "common": [
+        ("--prepared-dir", "prepared_dir", "Directory produced by the prepare command."),
+        ("--output-dir", "output_dir", "Root directory where per-run fitted model artifacts are stored."),
+        ("random_seed", None, "Deterministic random seed used during model training."),
+    ],
+    "logistic_regression": [
+        ("--lr-c", "lr_c", "Inverse regularization strength for logistic regression."),
+        ("--lr-max-iter", "lr_max_iter", "Maximum number of iterations for logistic regression."),
+        ("--lr-solver", "lr_solver", "Solver used by logistic regression."),
+    ],
+    "random_forest": [
+        ("--rf-n-estimators", "rf_n_estimators", "Number of trees in the random forest."),
+        ("--rf-max-depth", "rf_max_depth", "Maximum tree depth for the random forest."),
+        ("--rf-min-samples-split", "rf_min_samples_split", "Minimum samples required to split an internal node."),
+    ],
+}
+
 
 def add_prepare_command(subparsers) -> None:
     parser = subparsers.add_parser(
@@ -273,6 +291,34 @@ def get_train_model_params(args, model_name: str) -> dict[str, object]:
     raise ValueError(f"Unsupported model: {model_name}")
 
 
+def format_parameter_value(value: object) -> str:
+    if value is None:
+        return "None"
+    return str(value)
+
+
+def print_train_parameter_summary(args, model_name: str) -> None:
+    rows: list[tuple[str, str, str]] = []
+    for parameter_name, attr_name, description in TRAIN_PARAMETER_SUMMARIES["common"]:
+        value = TRAINING_RANDOM_SEED if attr_name is None else getattr(args, attr_name)
+        rows.append((parameter_name, format_parameter_value(value), description))
+
+    rows.append(("--model", model_name, "Which model to train for this invocation."))
+
+    for parameter_name, attr_name, description in TRAIN_PARAMETER_SUMMARIES[model_name]:
+        rows.append((parameter_name, format_parameter_value(getattr(args, attr_name)), description))
+
+    name_width = max(len("Name"), *(len(name) for name, _, _ in rows))
+    value_width = max(len("Value"), *(len(value) for _, value, _ in rows))
+
+    print(f"Training parameter summary for {model_name}:")
+    print(f"{'Name':<{name_width}}  {'Value':<{value_width}}  Description")
+    print(f"{'-' * name_width}  {'-' * value_width}  {'-' * len('Description')}")
+    for name, value, description in rows:
+        print(f"{name:<{name_width}}  {value:<{value_width}}  {description}")
+    print()
+
+
 def handle_prepare(args) -> int:
     metadata = prepare_pipeline(
         input_csv=args.input_csv,
@@ -295,6 +341,7 @@ def handle_prepare(args) -> int:
 
 def handle_train(args) -> int:
     for model_name in resolve_models(args.model):
+        print_train_parameter_summary(args, model_name)
         result = train_model_pipeline(
             prepared_dir=args.prepared_dir,
             model_name=model_name,
