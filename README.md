@@ -198,6 +198,13 @@ python -m src.cli evaluate \
 
 python -m src.cli sweep \
   --prepared-dir data/processed \
+  --model logistic_regression \
+  --output-dir artifacts/sweeps \
+  --validation-size 0.2 \
+  --threshold 0.5
+
+python -m src.cli sweep \
+  --prepared-dir data/processed \
   --model random_forest \
   --output-dir artifacts/sweeps \
   --validation-size 0.2 \
@@ -311,13 +318,44 @@ Useful evaluation flags:
 Sweep logistic regression:
 
 ```bash
-python -m src.cli sweep --model logistic_regression
+python -m src.cli sweep \
+  --prepared-dir data/processed \
+  --model logistic_regression \
+  --output-dir artifacts/sweeps \
+  --validation-size 0.2 \
+  --threshold 0.5
 ```
 
-Sweep random forest with a different validation fraction:
+Sweep random forest:
 
 ```bash
-python -m src.cli sweep --model random_forest --validation-size 0.25
+python -m src.cli sweep \
+  --prepared-dir data/processed \
+  --model random_forest \
+  --output-dir artifacts/sweeps \
+  --validation-size 0.2 \
+  --threshold 0.5
+```
+
+`sweep` saves ranked search results and a summary of the best configuration in `artifacts/sweeps`, but it does not save a trained `.joblib` model.
+To evaluate the best sweep candidate, retrain that model with the selected hyperparameters first, then run `evaluate` on the saved model artifact.
+
+Example flow for logistic regression:
+
+```bash
+python -m src.cli train \
+  --prepared-dir data/processed \
+  --model logistic_regression \
+  --output-dir artifacts/models \
+  --lr-c 0.5 \
+  --lr-max-iter 3000 \
+  --lr-solver liblinear
+
+python -m src.cli evaluate \
+  --prepared-dir data/processed \
+  --model-path artifacts/models/<run_id>/logistic_regression.joblib \
+  --output-dir artifacts/reports \
+  --threshold 0.5
 ```
 
 ### 5. Compare saved runs

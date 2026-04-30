@@ -49,7 +49,7 @@ def build_model(
 def get_default_sweep_grid(model_name: str) -> dict[str, list[Any]]:
     if model_name == "logistic_regression":
         return {
-            "C": [0.25, 0.5, 1.0, 2.0],
+            "C": [0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0],
         }
 
     if model_name == "random_forest":
