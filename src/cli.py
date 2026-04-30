@@ -4,13 +4,39 @@ import argparse
 from pathlib import Path
 
 from .data_processing import DEFAULT_DATA_URL, DEFAULT_RANDOM_SEED
-from .model import MODEL_CHOICES
+from .model import (
+    DEFAULT_LOGISTIC_REGRESSION_PARAMS,
+    DEFAULT_RANDOM_FOREST_PARAMS,
+    MODEL_CHOICES,
+    TRAINING_RANDOM_SEED,
+)
 from .pipeline import (
+    compare_runs_pipeline,
     evaluate_model_pipeline,
     prepare_pipeline,
+    resolve_saved_model_path,
     sweep_model_pipeline,
     train_model_pipeline,
 )
+
+TRAIN_PARAMETER_SUMMARIES = {
+    "common": [
+        ("--prepared-dir", "prepared_dir", "Directory produced by the prepare command."),
+        ("--output-dir", "output_dir", "Root directory where per-run fitted model artifacts are stored."),
+        ("random_seed", None, "Deterministic random seed used during model training."),
+    ],
+    "logistic_regression": [
+        ("--lr-c", "lr_c", "Inverse regularization strength for logistic regression."),
+        ("--lr-max-iter", "lr_max_iter", "Maximum number of iterations for logistic regression."),
+        ("--lr-solver", "lr_solver", "Solver used by logistic regression."),
+    ],
+    "random_forest": [
+        ("--rf-n-estimators", "rf_n_estimators", "Number of trees in the random forest."),
+        ("--rf-max-depth", "rf_max_depth", "Maximum tree depth for the random forest."),
+        ("--rf-min-samples-split", "rf_min_samples_split", "Minimum samples required to split an internal node."),
+        ("--rf-min-samples-leaf", "rf_min_samples_leaf", "Minimum samples required in each leaf node."),
+    ],
+}
 
 
 def add_prepare_command(subparsers) -> None:
@@ -66,7 +92,49 @@ def add_train_command(subparsers) -> None:
         "--output-dir",
         type=str,
         default="artifacts/models",
-        help="Directory where fitted model artifacts are stored.",
+        help="Root directory where per-run fitted model artifacts are stored.",
+    )
+    parser.add_argument(
+        "--lr-c",
+        type=float,
+        default=DEFAULT_LOGISTIC_REGRESSION_PARAMS["C"],
+        help="Inverse regularization strength for logistic regression.",
+    )
+    parser.add_argument(
+        "--lr-max-iter",
+        type=int,
+        default=DEFAULT_LOGISTIC_REGRESSION_PARAMS["max_iter"],
+        help="Maximum number of iterations for logistic regression.",
+    )
+    parser.add_argument(
+        "--lr-solver",
+        type=str,
+        default=DEFAULT_LOGISTIC_REGRESSION_PARAMS["solver"],
+        help="Solver used by logistic regression.",
+    )
+    parser.add_argument(
+        "--rf-n-estimators",
+        type=int,
+        default=DEFAULT_RANDOM_FOREST_PARAMS["n_estimators"],
+        help="Number of trees in the random forest.",
+    )
+    parser.add_argument(
+        "--rf-max-depth",
+        type=int,
+        default=DEFAULT_RANDOM_FOREST_PARAMS["max_depth"],
+        help="Maximum tree depth for the random forest.",
+    )
+    parser.add_argument(
+        "--rf-min-samples-split",
+        type=int,
+        default=DEFAULT_RANDOM_FOREST_PARAMS["min_samples_split"],
+        help="Minimum samples required to split an internal node.",
+    )
+    parser.add_argument(
+        "--rf-min-samples-leaf",
+        type=int,
+        default=DEFAULT_RANDOM_FOREST_PARAMS["min_samples_leaf"],
+        help="Minimum samples required in each leaf node.",
     )
 
 
@@ -97,13 +165,13 @@ def add_evaluate_command(subparsers) -> None:
         "--models-dir",
         type=str,
         default="artifacts/models",
-        help="Directory that stores trained model artifacts.",
+        help="Root directory that stores per-run trained model artifacts.",
     )
     parser.add_argument(
         "--output-dir",
         type=str,
         default="artifacts/reports",
-        help="Directory for evaluation reports and precision-recall curves.",
+        help="Root directory for per-run evaluation reports and precision-recall curves.",
     )
     parser.add_argument(
         "--threshold",
@@ -134,7 +202,7 @@ def add_sweep_command(subparsers) -> None:
         "--output-dir",
         type=str,
         default="artifacts/sweeps",
-        help="Directory where sweep outputs are written.",
+        help="Root directory where per-run sweep outputs are written.",
     )
     parser.add_argument(
         "--validation-size",
@@ -156,6 +224,43 @@ def add_sweep_command(subparsers) -> None:
     )
 
 
+def add_compare_command(subparsers) -> None:
+    parser = subparsers.add_parser(
+        "compare",
+        help="Build a comparison report across saved evaluated runs.",
+    )
+    parser.add_argument(
+        "--artifacts-root",
+        type=str,
+        default="artifacts",
+        help="Artifacts root that contains runs/ manifests and run_history.csv.",
+    )
+    parser.add_argument(
+        "--model",
+        choices=[*MODEL_CHOICES, "all"],
+        default="all",
+        help="Filter the comparison to a specific model family.",
+    )
+    parser.add_argument(
+        "--sort-by",
+        type=str,
+        default="average_precision",
+        help="Metric column used to rank runs in the comparison output.",
+    )
+    parser.add_argument(
+        "--top-n",
+        type=int,
+        default=None,
+        help="Optional limit on the number of comparison rows returned.",
+    )
+    parser.add_argument(
+        "--output-path",
+        type=str,
+        default=None,
+        help="Optional CSV or JSON output path for the comparison report.",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="CLI pipeline for the European credit card fraud detection dataset."
@@ -165,6 +270,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_train_command(subparsers)
     add_evaluate_command(subparsers)
     add_sweep_command(subparsers)
+    add_compare_command(subparsers)
     return parser
 
 
@@ -172,6 +278,53 @@ def resolve_models(model_argument: str) -> list[str]:
     if model_argument == "all":
         return list(MODEL_CHOICES)
     return [model_argument]
+
+
+def get_train_model_params(args, model_name: str) -> dict[str, object]:
+    if model_name == "logistic_regression":
+        return {
+            "C": args.lr_c,
+            "max_iter": args.lr_max_iter,
+            "solver": args.lr_solver,
+        }
+
+    if model_name == "random_forest":
+        return {
+            "n_estimators": args.rf_n_estimators,
+            "max_depth": args.rf_max_depth,
+            "min_samples_split": args.rf_min_samples_split,
+            "min_samples_leaf": args.rf_min_samples_leaf,
+        }
+
+    raise ValueError(f"Unsupported model: {model_name}")
+
+
+def format_parameter_value(value: object) -> str:
+    if value is None:
+        return "None"
+    return str(value)
+
+
+def print_train_parameter_summary(args, model_name: str) -> None:
+    rows: list[tuple[str, str, str]] = []
+    for parameter_name, attr_name, description in TRAIN_PARAMETER_SUMMARIES["common"]:
+        value = TRAINING_RANDOM_SEED if attr_name is None else getattr(args, attr_name)
+        rows.append((parameter_name, format_parameter_value(value), description))
+
+    rows.append(("--model", model_name, "Which model to train for this invocation."))
+
+    for parameter_name, attr_name, description in TRAIN_PARAMETER_SUMMARIES[model_name]:
+        rows.append((parameter_name, format_parameter_value(getattr(args, attr_name)), description))
+
+    name_width = max(len("Name"), *(len(name) for name, _, _ in rows))
+    value_width = max(len("Value"), *(len(value) for _, value, _ in rows))
+
+    print(f"Training parameter summary for {model_name}:")
+    print(f"{'Name':<{name_width}}  {'Value':<{value_width}}  Description")
+    print(f"{'-' * name_width}  {'-' * value_width}  {'-' * len('Description')}")
+    for name, value, description in rows:
+        print(f"{name:<{name_width}}  {value:<{value_width}}  {description}")
+    print()
 
 
 def handle_prepare(args) -> int:
@@ -196,13 +349,15 @@ def handle_prepare(args) -> int:
 
 def handle_train(args) -> int:
     for model_name in resolve_models(args.model):
+        print_train_parameter_summary(args, model_name)
         result = train_model_pipeline(
             prepared_dir=args.prepared_dir,
             model_name=model_name,
             output_dir=args.output_dir,
-            random_seed=DEFAULT_RANDOM_SEED,
+            model_params=get_train_model_params(args, model_name),
+            random_seed=TRAINING_RANDOM_SEED,
         )
-        print(f"Trained {model_name}: {result['model_path']}")
+        print(f"Trained {model_name}: run_id={result['run_id']}, model={result['model_path']}")
     return 0
 
 
@@ -213,7 +368,7 @@ def iter_evaluation_targets(args) -> list[tuple[str, str]]:
 
     targets = []
     for model_name in resolve_models(args.model):
-        targets.append((model_name, str(Path(args.models_dir) / f"{model_name}.joblib")))
+        targets.append((model_name, str(resolve_saved_model_path(args.models_dir, model_name))))
     return targets
 
 
@@ -232,6 +387,7 @@ def handle_evaluate(args) -> int:
             f"f1={result['f1_score']:.4f}, "
             f"average_precision={result['average_precision']:.4f}"
         )
+        print(f"Run ID: {result['run_id']}")
         print(f"Report: {result['report_json']}")
     return 0
 
@@ -246,8 +402,27 @@ def handle_sweep(args) -> int:
         random_seed=DEFAULT_RANDOM_SEED,
         threshold=args.threshold,
     )
+    print(f"Run ID: {result['run_id']}")
     print(f"Sweep results: {result['results_csv']}")
     print(f"Sweep summary: {result['summary_json']}")
+    print(f"Train best model: {result['train_best_model_command']}")
+    print(f"Evaluate latest trained model: {result['evaluate_latest_model_command']}")
+    return 0
+
+
+def handle_compare(args) -> int:
+    result = compare_runs_pipeline(
+        artifact_root=args.artifacts_root,
+        model_name=args.model,
+        sort_by=args.sort_by,
+        top_n=args.top_n,
+        output_path=args.output_path,
+    )
+    print(f"Comparison rows: {result['row_count']}")
+    print(f"Run history: {result['history_path']}")
+    if result["comparison_path"]:
+        print(f"Comparison report: {result['comparison_path']}")
+    print(result["preview"])
     return 0
 
 
@@ -263,6 +438,8 @@ def main() -> int:
         return handle_evaluate(args)
     if args.command == "sweep":
         return handle_sweep(args)
+    if args.command == "compare":
+        return handle_compare(args)
 
     parser.error(f"Unsupported command: {args.command}")
     return 1
