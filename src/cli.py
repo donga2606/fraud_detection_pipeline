@@ -34,6 +34,7 @@ TRAIN_PARAMETER_SUMMARIES = {
         ("--rf-n-estimators", "rf_n_estimators", "Number of trees in the random forest."),
         ("--rf-max-depth", "rf_max_depth", "Maximum tree depth for the random forest."),
         ("--rf-min-samples-split", "rf_min_samples_split", "Minimum samples required to split an internal node."),
+        ("--rf-min-samples-leaf", "rf_min_samples_leaf", "Minimum samples required in each leaf node."),
     ],
 }
 
@@ -128,6 +129,12 @@ def add_train_command(subparsers) -> None:
         type=int,
         default=DEFAULT_RANDOM_FOREST_PARAMS["min_samples_split"],
         help="Minimum samples required to split an internal node.",
+    )
+    parser.add_argument(
+        "--rf-min-samples-leaf",
+        type=int,
+        default=DEFAULT_RANDOM_FOREST_PARAMS["min_samples_leaf"],
+        help="Minimum samples required in each leaf node.",
     )
 
 
@@ -286,6 +293,7 @@ def get_train_model_params(args, model_name: str) -> dict[str, object]:
             "n_estimators": args.rf_n_estimators,
             "max_depth": args.rf_max_depth,
             "min_samples_split": args.rf_min_samples_split,
+            "min_samples_leaf": args.rf_min_samples_leaf,
         }
 
     raise ValueError(f"Unsupported model: {model_name}")
@@ -397,6 +405,8 @@ def handle_sweep(args) -> int:
     print(f"Run ID: {result['run_id']}")
     print(f"Sweep results: {result['results_csv']}")
     print(f"Sweep summary: {result['summary_json']}")
+    print(f"Train best model: {result['train_best_model_command']}")
+    print(f"Evaluate latest trained model: {result['evaluate_latest_model_command']}")
     return 0
 
 

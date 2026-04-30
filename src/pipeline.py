@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import time
 from pathlib import Path
 
@@ -78,6 +79,74 @@ def resolve_saved_model_path(models_dir: str | Path, model_name: str) -> Path:
     if not candidates:
         raise FileNotFoundError(f"No saved model found for {model_name} under {models_root.resolve()}")
     return candidates[0]
+
+
+SWEEP_TRAIN_PARAM_FLAGS = {
+    "logistic_regression": {
+        "C": "--lr-c",
+        "max_iter": "--lr-max-iter",
+        "solver": "--lr-solver",
+    },
+    "random_forest": {
+        "n_estimators": "--rf-n-estimators",
+        "max_depth": "--rf-max-depth",
+        "min_samples_split": "--rf-min-samples-split",
+        "min_samples_leaf": "--rf-min-samples-leaf",
+    },
+}
+
+
+def shell_quote(value: object) -> str:
+    return shlex.quote(str(value))
+
+
+def build_sweep_followup_commands(
+    model_name: str,
+    prepared_dir: str | Path,
+    artifact_root: str | Path,
+    best_configuration: dict[str, object],
+    threshold: float,
+) -> dict[str, str]:
+    models_dir = Path(artifact_root) / "models"
+    reports_dir = Path(artifact_root) / "reports"
+    train_parts = [
+        "python",
+        "-m",
+        "src.cli",
+        "train",
+        "--prepared-dir",
+        shell_quote(prepared_dir),
+        "--model",
+        shell_quote(model_name),
+        "--output-dir",
+        shell_quote(models_dir),
+    ]
+    for param_name, flag in SWEEP_TRAIN_PARAM_FLAGS[model_name].items():
+        value = best_configuration.get(param_name)
+        if value is None:
+            continue
+        train_parts.extend([flag, shell_quote(value)])
+
+    evaluate_parts = [
+        "python",
+        "-m",
+        "src.cli",
+        "evaluate",
+        "--prepared-dir",
+        shell_quote(prepared_dir),
+        "--model",
+        shell_quote(model_name),
+        "--models-dir",
+        shell_quote(models_dir),
+        "--output-dir",
+        shell_quote(reports_dir),
+        "--threshold",
+        shell_quote(threshold),
+    ]
+    return {
+        "train_best_model": " ".join(train_parts),
+        "evaluate_latest_model": " ".join(evaluate_parts),
+    }
 
 
 def train_model_pipeline(
@@ -305,6 +374,13 @@ def sweep_model_pipeline(
     results_frame.to_csv(results_path, index=False)
 
     best_row = results_frame.iloc[0].to_dict()
+    recommended_commands = build_sweep_followup_commands(
+        model_name=model_name,
+        prepared_dir=prepared_dir,
+        artifact_root=artifact_root,
+        best_configuration=best_row,
+        threshold=threshold,
+    )
     summary_payload = {
         "run_id": run_id,
         "completed_at": completed_at,
@@ -315,6 +391,7 @@ def sweep_model_pipeline(
         "sampling_strategy": effective_sampling_strategy,
         "best_configuration": best_row,
         "evaluated_configurations": int(len(results_frame)),
+        "recommended_commands": recommended_commands,
     }
     summary_path.write_text(json.dumps(summary_payload, indent=2), encoding="utf-8")
     manifest_path = upsert_run_manifest(
@@ -335,6 +412,7 @@ def sweep_model_pipeline(
                 "summary_json": str(summary_path.resolve()),
                 "best_configuration": best_row,
                 "evaluated_configurations": int(len(results_frame)),
+                "recommended_commands": recommended_commands,
             },
         },
     )
@@ -345,6 +423,8 @@ def sweep_model_pipeline(
         "results_csv": str(results_path),
         "summary_json": str(summary_path),
         "manifest_path": str(manifest_path),
+        "train_best_model_command": recommended_commands["train_best_model"],
+        "evaluate_latest_model_command": recommended_commands["evaluate_latest_model"],
     }
 
 

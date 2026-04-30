@@ -275,13 +275,13 @@ python -m src.cli train --model logistic_regression --lr-c 0.5 --lr-max-iter 300
 Train random forest with custom hyperparameters:
 
 ```bash
-python -m src.cli train --model random_forest --rf-n-estimators 500 --rf-max-depth 12 --rf-min-samples-split 4
+python -m src.cli train --model random_forest --rf-n-estimators 500 --rf-max-depth 12 --rf-min-samples-split 4 --rf-min-samples-leaf 1
 ```
 
 Available training flags:
 
 - Logistic regression: `--lr-c`, `--lr-max-iter`, `--lr-solver`
-- Random forest: `--rf-n-estimators`, `--rf-max-depth`, `--rf-min-samples-split`
+- Random forest: `--rf-n-estimators`, `--rf-max-depth`, `--rf-min-samples-split`, `--rf-min-samples-leaf`
 
 Each `train` command now creates a unique run folder under `artifacts/models/`, so repeated training no longer overwrites older model artifacts.
 The CLI also prints a training start message and elapsed fit time, and random forest training shows sklearn progress output so long runs do not appear frozen.
@@ -338,24 +338,15 @@ python -m src.cli sweep \
 ```
 
 `sweep` saves ranked search results and a summary of the best configuration in `artifacts/sweeps`, but it does not save a trained `.joblib` model.
-To evaluate the best sweep candidate, retrain that model with the selected hyperparameters first, then run `evaluate` on the saved model artifact.
+The sweep summary and CLI output now include copy-pasteable `train` and `evaluate` commands for the best configuration, so you do not need to convert the JSON fields by hand.
 
 Example flow for logistic regression:
 
 ```bash
-python -m src.cli train \
-  --prepared-dir data/processed \
-  --model logistic_regression \
-  --output-dir artifacts/models \
-  --lr-c 0.5 \
-  --lr-max-iter 3000 \
-  --lr-solver liblinear
+python -m src.cli sweep --model logistic_regression
 
-python -m src.cli evaluate \
-  --prepared-dir data/processed \
-  --model-path artifacts/models/<run_id>/logistic_regression.joblib \
-  --output-dir artifacts/reports \
-  --threshold 0.5
+# Copy the printed "Train best model" command.
+# Then copy the printed "Evaluate latest trained model" command.
 ```
 
 ### 5. Compare saved runs
