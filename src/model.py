@@ -56,7 +56,7 @@ def get_default_sweep_grid(model_name: str) -> dict[str, list[Any]]:
         return {
             "n_estimators": [200, 300, 500],
             "max_depth": [None, 12, 20],
-            "min_samples_leaf": [1, 3],
+            "min_samples_leaf": [3],
         }
 
     raise ValueError(f"Unsupported model: {model_name}")

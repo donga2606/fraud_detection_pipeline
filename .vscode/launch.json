@@ -1,0 +1,81 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "CLI: Prepare",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.cli",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "prepare"
+      ]
+    },
+    {
+      "name": "CLI: Train Logistic Regression",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.cli",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "train",
+        "--prepared-dir",
+        "data/processed",
+        "--model",
+        "logistic_regression"
+      ]
+    },
+    {
+      "name": "CLI: Evaluate Logistic Regression",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.cli",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "evaluate",
+        "--prepared-dir",
+        "data/processed",
+        "--model",
+        "logistic_regression",
+        "--models-dir",
+        "artifacts/models",
+        "--output-dir",
+        "artifacts/reports",
+        "--threshold",
+        "0.5"
+      ]
+    },
+    {
+      "name": "CLI: Evaluate Random Forest",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.cli",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "evaluate",
+        "--prepared-dir",
+        "data/processed",
+        "--model",
+        "random_forest",
+        "--models-dir",
+        "artifacts/models",
+        "--output-dir",
+        "artifacts/reports",
+        "--threshold",
+        "0.5"
+      ]
+    }
+  ]
+}
