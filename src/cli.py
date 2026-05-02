@@ -389,6 +389,7 @@ def handle_evaluate(args) -> int:
         )
         print(f"Run ID: {result['run_id']}")
         print(f"Report: {result['report_json']}")
+        print(f"Confusion matrix: {result['confusion_matrix_png']}")
     return 0
 
 

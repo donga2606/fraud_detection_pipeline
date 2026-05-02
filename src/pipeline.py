@@ -21,7 +21,12 @@ from .data_processing import (
     split_features_and_target,
     temporal_train_test_split,
 )
-from .evaluation import compute_metrics, save_evaluation_report, save_precision_recall_curve
+from .evaluation import (
+    compute_metrics,
+    save_confusion_matrix,
+    save_evaluation_report,
+    save_precision_recall_curve,
+)
 from .model import build_model, iter_sweep_configs, predict_scores
 from .run_history import (
     create_run_id,
@@ -249,6 +254,7 @@ def evaluate_model_pipeline(
 
     stem = model_file.stem
     artifacts = save_precision_recall_curve(target, scores, run_report_path, stem)
+    artifacts.update(save_confusion_matrix(target, scores, threshold, run_report_path, stem))
     report_path = save_evaluation_report(
         result,
         run_report_path,
@@ -274,10 +280,15 @@ def evaluate_model_pipeline(
             "average_precision": result.average_precision,
             "positive_predictions": result.positive_predictions,
             "fraud_cases": result.fraud_cases,
+            "true_negatives": result.true_negatives,
+            "false_positives": result.false_positives,
+            "false_negatives": result.false_negatives,
+            "true_positives": result.true_positives,
             "model_path": str(model_file.resolve()),
             "report_json": str(report_path.resolve()),
             "curve_csv": str(Path(artifacts["curve_csv"]).resolve()),
             "curve_png": str(Path(artifacts["curve_png"]).resolve()),
+            "confusion_matrix_png": str(Path(artifacts["confusion_matrix_png"]).resolve()),
         },
     }
     if run_context is None:

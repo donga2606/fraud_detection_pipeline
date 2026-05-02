@@ -56,6 +56,7 @@ The implementation follows the HCMUT Internship 1 engineering constraints:
      - F1-score
      - Average precision
      - Precision-recall curve (`.csv` and `.png`)
+     - Confusion matrix (`.png`)
    - Updates `artifacts/run_history.csv` for cross-run comparison
 
 4. `sweep`
@@ -221,7 +222,7 @@ After this sequence finishes, you should have:
 
 - processed data in `data/processed`
 - trained model runs in `artifacts/models`
-- evaluation reports and precision-recall curves in `artifacts/reports`
+- evaluation reports, precision-recall curves, and confusion matrices in `artifacts/reports`
 - sweep outputs in `artifacts/sweeps`
 - a comparison report in `artifacts/comparison_report.json`
 
@@ -397,6 +398,7 @@ After a full run, the generated directories typically look like this:
 |   |-- reports
 |   |   `-- 20260429T065500Z-ab12cd34
 |   |       |-- logistic_regression_evaluation.json
+|   |       |-- logistic_regression_confusion_matrix.png
 |   |       |-- logistic_regression_precision_recall_curve.csv
 |   |       `-- logistic_regression_precision_recall_curve.png
 |   |-- runs
