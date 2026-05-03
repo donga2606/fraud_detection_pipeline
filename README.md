@@ -28,52 +28,6 @@ The implementation follows the HCMUT Internship 1 engineering constraints:
 |   `-- pipeline.py
 ```
 
-## Pipeline Overview
-
-1. `prepare`
-   - Downloads the dataset automatically or loads a local CSV
-   - Sorts rows by `Time`
-   - Applies a temporal train/test split
-   - Fits scaling on the training period only
-   - Handles class imbalance with SMOTE on the training split
-   - Saves raw and processed artifacts under `data/`
-
-2. `train`
-   - Trains one or both baseline models:
-     - `logistic_regression`
-     - `random_forest`
-   - Accepts optional model-specific hyperparameters through CLI flags
-   - Creates a unique `run_id` for each training invocation
-   - Saves fitted models under `artifacts/models/<run_id>/`
-   - Persists requested and resolved training parameters for reproducibility
-
-3. `evaluate`
-   - Scores trained models on the untouched temporal holdout
-   - Reuses the model's `run_id` when evaluating a run-managed artifact
-   - Reports:
-     - Recall
-     - Precision
-     - F1-score
-     - Average precision
-     - Precision-recall curve (`.csv` and `.png`)
-     - Confusion matrix (`.png`)
-   - Updates `artifacts/run_history.csv` for cross-run comparison
-
-4. `sweep`
-   - Runs a deterministic hyperparameter sweep
-   - Uses an inner temporal validation split carved from the training timeline
-   - Saves ranked sweep results under `artifacts/sweeps/<run_id>/` for later review
-
-5. `compare`
-   - Rebuilds `artifacts/run_history.csv` from saved run manifests
-   - Produces a ranked CSV or JSON comparison report across evaluated runs
-   - Lets you compare models and training hyperparameters without a separate UI
-
-6. `dashboard`
-   - Launches separately with Streamlit after CLI training/evaluation completes
-   - Reads saved run manifests and `artifacts/run_history.csv`
-   - Shows run tables, detailed artifacts, and side-by-side comparisons
-
 ## Setup
 
 Create and activate a virtual environment, then install dependencies:
@@ -136,7 +90,18 @@ By default, `prepare` downloads the public TensorFlow-hosted mirror of the Europ
 
 You can also provide your own local file with `--input-csv`.
 
-## CLI Usage
+## Workflow Summary
+
+The project includes six user-facing commands:
+
+1. `prepare`: validate, temporally split, scale, and resample data
+2. `train`: fit `logistic_regression`, `random_forest`, or both
+3. `evaluate`: compute metrics and generate reports/plots for a saved model
+4. `sweep`: run deterministic hyperparameter search on an inner temporal split
+5. `compare`: rank evaluated runs and export CSV/JSON report
+6. `dashboard`: inspect saved runs in Streamlit
+
+## Quick Start (Recommended)
 
 The project exposes a single CLI entrypoint:
 
@@ -151,82 +116,26 @@ python -m src.cli --help
 python -m src.cli train --help
 ```
 
-The workflow is usually:
-
-1. `prepare` to download or load the dataset and build the processed splits
-2. `train` to fit one or more models and save them under `artifacts/models/`
-3. `evaluate` to score saved models and write reports under `artifacts/reports/`
-4. `sweep` to run a hyperparameter search for one model family
-5. `compare` to summarize evaluated runs across the `artifacts/` directory
-
-### Full example: end-to-end run
-
-The example below uses the default hosted dataset, trains both model families, evaluates them, runs a random forest sweep, and writes a JSON comparison report:
+Run this end-to-end sequence:
 
 ```bash
-python -m src.cli prepare \
-  --output-dir data \
-  --test-size 0.2 \
-  --sampling-strategy 0.25
-
-python -m src.cli train \
-  --prepared-dir data/processed \
-  --model all \
-  --output-dir artifacts/models
-
-python -m src.cli train \
-  --prepared-dir data/processed \
-  --model logistic_regression \
-  --output-dir artifacts/models \
-  --lr-c 0.5 \
-  --lr-max-iter 3000 \
-  --lr-solver liblinear
-
-python -m src.cli train \
-  --prepared-dir data/processed \
-  --model random_forest \
-  --output-dir artifacts/models \
-  --rf-n-estimators 500 \
-  --rf-max-depth 12 \
-  --rf-min-samples-split 4
-
-python -m src.cli evaluate \
-  --prepared-dir data/processed \
-  --model all \
-  --models-dir artifacts/models \
-  --output-dir artifacts/reports \
-  --threshold 0.5
-
-python -m src.cli sweep \
-  --prepared-dir data/processed \
-  --model logistic_regression \
-  --output-dir artifacts/sweeps \
-  --validation-size 0.2 \
-  --threshold 0.5
-
-python -m src.cli sweep \
-  --prepared-dir data/processed \
-  --model random_forest \
-  --output-dir artifacts/sweeps \
-  --validation-size 0.2 \
-  --threshold 0.5
-
-python -m src.cli compare \
-  --artifacts-root artifacts \
-  --model all \
-  --sort-by average_precision \
-  --output-path artifacts/comparison_report.json
+python -m src.cli prepare
+python -m src.cli train --model all
+python -m src.cli evaluate --model all
+python -m src.cli compare --output-path artifacts/comparison_report.json
+streamlit run ui/app.py
 ```
 
-After this sequence finishes, you should have:
+After it finishes, you should have:
 
 - processed data in `data/processed`
 - trained model runs in `artifacts/models`
 - evaluation reports, precision-recall curves, and confusion matrices in `artifacts/reports`
-- sweep outputs in `artifacts/sweeps`
 - a comparison report in `artifacts/comparison_report.json`
 
-### 1. Prepare the data
+## Command Reference
+
+### `prepare`
 
 ```bash
 python -m src.cli prepare
@@ -239,19 +148,14 @@ What it does:
 - applies scaling and SMOTE resampling to the training split
 - writes prepared artifacts under `data/` by default
 
-Use a local dataset instead of downloading:
+Common options:
 
 ```bash
 python -m src.cli prepare --input-csv /path/to/creditcard.csv
-```
-
-Write outputs to a custom location and tune preprocessing behavior:
-
-```bash
 python -m src.cli prepare --output-dir data --test-size 0.2 --sampling-strategy 0.25
 ```
 
-### 2. Train models
+### `train`
 
 Train both model families with default hyperparameters:
 
@@ -259,23 +163,10 @@ Train both model families with default hyperparameters:
 python -m src.cli train --model all
 ```
 
-The `train` command uses `data/processed` by default, so `python -m src.cli train` reproduces the baseline training configuration if you already ran `prepare`.
-
-Train only logistic regression:
-
-```bash
-python -m src.cli train --model logistic_regression
-```
-
-Train logistic regression with custom hyperparameters:
+Train one model with custom hyperparameters:
 
 ```bash
 python -m src.cli train --model logistic_regression --lr-c 0.5 --lr-max-iter 3000 --lr-solver liblinear
-```
-
-Train random forest with custom hyperparameters:
-
-```bash
 python -m src.cli train --model random_forest --rf-n-estimators 500 --rf-max-depth 12 --rf-min-samples-split 4 --rf-min-samples-leaf 1
 ```
 
@@ -287,7 +178,7 @@ Available training flags:
 Each `train` command now creates a unique run folder under `artifacts/models/`, so repeated training no longer overwrites older model artifacts.
 The CLI also prints a training start message and elapsed fit time, and random forest training shows sklearn progress output so long runs do not appear frozen.
 
-### 3. Evaluate trained models
+### `evaluate`
 
 Evaluate the latest saved run for both model families:
 
@@ -314,25 +205,14 @@ Useful evaluation flags:
 - `--output-dir` to change where reports are written
 - `--threshold` to change the fraud classification cutoff
 
-### 4. Run a hyperparameter sweep
+### `sweep`
 
-Sweep logistic regression:
+Sweep one model family:
 
 ```bash
 python -m src.cli sweep \
   --prepared-dir data/processed \
   --model logistic_regression \
-  --output-dir artifacts/sweeps \
-  --validation-size 0.2 \
-  --threshold 0.5
-```
-
-Sweep random forest:
-
-```bash
-python -m src.cli sweep \
-  --prepared-dir data/processed \
-  --model random_forest \
   --output-dir artifacts/sweeps \
   --validation-size 0.2 \
   --threshold 0.5
@@ -350,7 +230,7 @@ python -m src.cli sweep --model logistic_regression
 # Then copy the printed "Evaluate latest trained model" command.
 ```
 
-### 5. Compare saved runs
+### `compare`
 
 Print a comparison preview from all evaluated runs:
 
@@ -372,7 +252,7 @@ python -m src.cli compare --output-path artifacts/comparison_report.json
 
 `compare` can also write CSV output if `--output-path` ends with `.csv`.
 
-### 6. Launch the dashboard UI
+### `dashboard`
 
 Start the Streamlit dashboard after you have trained and evaluated one or more runs:
 
@@ -443,12 +323,14 @@ After a full run, the generated directories typically look like this:
 
 ## Recommended Workflow
 
-Use the CLI for experiment execution and the dashboard for inspection:
+If you only run one command sequence, use the Quick Start block above.
+For targeted experiments, a common loop is:
 
 ```bash
 python -m src.cli train --model logistic_regression --lr-c 0.5 --lr-max-iter 3000
 python -m src.cli evaluate --model logistic_regression
+python -m src.cli compare --model logistic_regression --top-n 5
 streamlit run ui/app.py
 ```
 
-This keeps training reproducible and scriptable while giving you a simple UI to review metrics, hyperparameters, and precision-recall artifacts afterward.
+This keeps experiments reproducible and scriptable while making model iteration easy to inspect.
