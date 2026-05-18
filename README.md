@@ -38,6 +38,13 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+XGBoost and LightGBM need a system OpenMP runtime (not installed by pip):
+
+- **macOS:** `brew install libomp`
+- **Debian/Ubuntu:** `sudo apt install libgomp1`
+
+If you skip those steps, `logistic_regression` and `random_forest` still work; `xgboost` and `lightgbm` train/sweep commands will fail until OpenMP is available. For a reproducible examiner setup, use [Docker Setup](#docker-setup) below.
+
 ## Docker Setup
 
 If you want the instructor to run the project in a consistent environment, you can use Docker instead of a local Python installation.

@@ -5,8 +5,10 @@ from pathlib import Path
 
 from .data_processing import DEFAULT_DATA_URL, DEFAULT_RANDOM_SEED
 from .model import (
+    DEFAULT_LIGHTGBM_PARAMS,
     DEFAULT_LOGISTIC_REGRESSION_PARAMS,
     DEFAULT_RANDOM_FOREST_PARAMS,
+    DEFAULT_XGBOOST_PARAMS,
     MODEL_CHOICES,
     TRAINING_RANDOM_SEED,
 )
@@ -35,6 +37,23 @@ TRAIN_PARAMETER_SUMMARIES = {
         ("--rf-max-depth", "rf_max_depth", "Maximum tree depth for the random forest."),
         ("--rf-min-samples-split", "rf_min_samples_split", "Minimum samples required to split an internal node."),
         ("--rf-min-samples-leaf", "rf_min_samples_leaf", "Minimum samples required in each leaf node."),
+    ],
+    "xgboost": [
+        ("--xgb-n-estimators", "xgb_n_estimators", "Number of boosting rounds for XGBoost."),
+        ("--xgb-max-depth", "xgb_max_depth", "Maximum tree depth for XGBoost."),
+        ("--xgb-learning-rate", "xgb_learning_rate", "Learning rate for XGBoost."),
+        ("--xgb-subsample", "xgb_subsample", "Row subsample ratio for XGBoost."),
+        ("--xgb-colsample-bytree", "xgb_colsample_bytree", "Column subsample ratio per tree for XGBoost."),
+        ("--xgb-min-child-weight", "xgb_min_child_weight", "Minimum sum of instance weight in a child for XGBoost."),
+    ],
+    "lightgbm": [
+        ("--lgbm-n-estimators", "lgbm_n_estimators", "Number of boosting rounds for LightGBM."),
+        ("--lgbm-max-depth", "lgbm_max_depth", "Maximum tree depth for LightGBM (-1 means no limit)."),
+        ("--lgbm-learning-rate", "lgbm_learning_rate", "Learning rate for LightGBM."),
+        ("--lgbm-num-leaves", "lgbm_num_leaves", "Maximum number of leaves per tree for LightGBM."),
+        ("--lgbm-min-child-samples", "lgbm_min_child_samples", "Minimum samples required in each leaf for LightGBM."),
+        ("--lgbm-subsample", "lgbm_subsample", "Row subsample ratio for LightGBM."),
+        ("--lgbm-colsample-bytree", "lgbm_colsample_bytree", "Column subsample ratio per tree for LightGBM."),
     ],
 }
 
@@ -135,6 +154,84 @@ def add_train_command(subparsers) -> None:
         type=int,
         default=DEFAULT_RANDOM_FOREST_PARAMS["min_samples_leaf"],
         help="Minimum samples required in each leaf node.",
+    )
+    parser.add_argument(
+        "--xgb-n-estimators",
+        type=int,
+        default=DEFAULT_XGBOOST_PARAMS["n_estimators"],
+        help="Number of boosting rounds for XGBoost.",
+    )
+    parser.add_argument(
+        "--xgb-max-depth",
+        type=int,
+        default=DEFAULT_XGBOOST_PARAMS["max_depth"],
+        help="Maximum tree depth for XGBoost.",
+    )
+    parser.add_argument(
+        "--xgb-learning-rate",
+        type=float,
+        default=DEFAULT_XGBOOST_PARAMS["learning_rate"],
+        help="Learning rate for XGBoost.",
+    )
+    parser.add_argument(
+        "--xgb-subsample",
+        type=float,
+        default=DEFAULT_XGBOOST_PARAMS["subsample"],
+        help="Row subsample ratio for XGBoost.",
+    )
+    parser.add_argument(
+        "--xgb-colsample-bytree",
+        type=float,
+        default=DEFAULT_XGBOOST_PARAMS["colsample_bytree"],
+        help="Column subsample ratio per tree for XGBoost.",
+    )
+    parser.add_argument(
+        "--xgb-min-child-weight",
+        type=int,
+        default=DEFAULT_XGBOOST_PARAMS["min_child_weight"],
+        help="Minimum sum of instance weight in a child for XGBoost.",
+    )
+    parser.add_argument(
+        "--lgbm-n-estimators",
+        type=int,
+        default=DEFAULT_LIGHTGBM_PARAMS["n_estimators"],
+        help="Number of boosting rounds for LightGBM.",
+    )
+    parser.add_argument(
+        "--lgbm-max-depth",
+        type=int,
+        default=DEFAULT_LIGHTGBM_PARAMS["max_depth"],
+        help="Maximum tree depth for LightGBM (-1 means no limit).",
+    )
+    parser.add_argument(
+        "--lgbm-learning-rate",
+        type=float,
+        default=DEFAULT_LIGHTGBM_PARAMS["learning_rate"],
+        help="Learning rate for LightGBM.",
+    )
+    parser.add_argument(
+        "--lgbm-num-leaves",
+        type=int,
+        default=DEFAULT_LIGHTGBM_PARAMS["num_leaves"],
+        help="Maximum number of leaves per tree for LightGBM.",
+    )
+    parser.add_argument(
+        "--lgbm-min-child-samples",
+        type=int,
+        default=DEFAULT_LIGHTGBM_PARAMS["min_child_samples"],
+        help="Minimum samples required in each leaf for LightGBM.",
+    )
+    parser.add_argument(
+        "--lgbm-subsample",
+        type=float,
+        default=DEFAULT_LIGHTGBM_PARAMS["subsample"],
+        help="Row subsample ratio for LightGBM.",
+    )
+    parser.add_argument(
+        "--lgbm-colsample-bytree",
+        type=float,
+        default=DEFAULT_LIGHTGBM_PARAMS["colsample_bytree"],
+        help="Column subsample ratio per tree for LightGBM.",
     )
 
 
@@ -294,6 +391,27 @@ def get_train_model_params(args, model_name: str) -> dict[str, object]:
             "max_depth": args.rf_max_depth,
             "min_samples_split": args.rf_min_samples_split,
             "min_samples_leaf": args.rf_min_samples_leaf,
+        }
+
+    if model_name == "xgboost":
+        return {
+            "n_estimators": args.xgb_n_estimators,
+            "max_depth": args.xgb_max_depth,
+            "learning_rate": args.xgb_learning_rate,
+            "subsample": args.xgb_subsample,
+            "colsample_bytree": args.xgb_colsample_bytree,
+            "min_child_weight": args.xgb_min_child_weight,
+        }
+
+    if model_name == "lightgbm":
+        return {
+            "n_estimators": args.lgbm_n_estimators,
+            "max_depth": args.lgbm_max_depth,
+            "learning_rate": args.lgbm_learning_rate,
+            "num_leaves": args.lgbm_num_leaves,
+            "min_child_samples": args.lgbm_min_child_samples,
+            "subsample": args.lgbm_subsample,
+            "colsample_bytree": args.lgbm_colsample_bytree,
         }
 
     raise ValueError(f"Unsupported model: {model_name}")
