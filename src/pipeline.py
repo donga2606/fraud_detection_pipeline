@@ -98,6 +98,23 @@ SWEEP_TRAIN_PARAM_FLAGS = {
         "min_samples_split": "--rf-min-samples-split",
         "min_samples_leaf": "--rf-min-samples-leaf",
     },
+    "xgboost": {
+        "n_estimators": "--xgb-n-estimators",
+        "max_depth": "--xgb-max-depth",
+        "learning_rate": "--xgb-learning-rate",
+        "subsample": "--xgb-subsample",
+        "colsample_bytree": "--xgb-colsample-bytree",
+        "min_child_weight": "--xgb-min-child-weight",
+    },
+    "lightgbm": {
+        "n_estimators": "--lgbm-n-estimators",
+        "max_depth": "--lgbm-max-depth",
+        "learning_rate": "--lgbm-learning-rate",
+        "num_leaves": "--lgbm-num-leaves",
+        "min_child_samples": "--lgbm-min-child-samples",
+        "subsample": "--lgbm-subsample",
+        "colsample_bytree": "--lgbm-colsample-bytree",
+    },
 }
 
 
@@ -172,6 +189,12 @@ def train_model_pipeline(
     if model_name == "random_forest" and "verbose" in model.get_params():
         model.set_params(verbose=1)
         print("Random forest progress logging is enabled.", flush=True)
+    if model_name == "xgboost" and "verbose" in model.get_params():
+        model.set_params(verbose=1)
+        print("XGBoost progress logging is enabled.", flush=True)
+    if model_name == "lightgbm" and "verbosity" in model.get_params():
+        model.set_params(verbosity=1)
+        print("LightGBM progress logging is enabled.", flush=True)
     fit_started_at = time.perf_counter()
     model.fit(features, target)
     fit_elapsed_seconds = time.perf_counter() - fit_started_at

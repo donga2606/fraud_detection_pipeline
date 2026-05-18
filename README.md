@@ -38,6 +38,13 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+XGBoost and LightGBM need a system OpenMP runtime (not installed by pip):
+
+- **macOS:** `brew install libomp`
+- **Debian/Ubuntu:** `sudo apt install libgomp1`
+
+If you skip those steps, `logistic_regression` and `random_forest` still work; `xgboost` and `lightgbm` train/sweep commands will fail until OpenMP is available. For a reproducible examiner setup, use [Docker Setup](#docker-setup) below.
+
 ## Docker Setup
 
 If you want the instructor to run the project in a consistent environment, you can use Docker instead of a local Python installation.
@@ -92,14 +99,14 @@ You can also provide your own local file with `--input-csv`.
 
 ## Workflow Summary
 
-The project includes six user-facing commands:
+The project includes five CLI commands plus one dashboard entrypoint:
 
 1. `prepare`: validate, temporally split, scale, and resample data
-2. `train`: fit `logistic_regression`, `random_forest`, or both
+2. `train`: fit `logistic_regression`, `random_forest`, `xgboost`, `lightgbm`, or all
 3. `evaluate`: compute metrics and generate reports/plots for a saved model
 4. `sweep`: run deterministic hyperparameter search on an inner temporal split
 5. `compare`: rank evaluated runs and export CSV/JSON report
-6. `dashboard`: inspect saved runs in Streamlit
+6. `dashboard`: inspect saved runs in Streamlit (via `streamlit run ui/app.py` or Docker `dashboard`)
 
 ## Quick Start (Recommended)
 
@@ -157,7 +164,7 @@ python -m src.cli prepare --output-dir data --test-size 0.2 --sampling-strategy 
 
 ### `train`
 
-Train both model families with default hyperparameters:
+Train all model families with default hyperparameters:
 
 ```bash
 python -m src.cli train --model all
@@ -180,7 +187,7 @@ The CLI also prints a training start message and elapsed fit time, and random fo
 
 ### `evaluate`
 
-Evaluate the latest saved run for both model families:
+Evaluate the latest saved run for all model families:
 
 ```bash
 python -m src.cli evaluate --model all
